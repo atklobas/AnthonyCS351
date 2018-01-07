@@ -19,6 +19,8 @@ import javax.swing.event.ChangeEvent;
 
 public class ImageViewer {
 	public static final float TO_DEGREES=1f/360;
+	public static final float TO_INT=1f/100;
+	float hue=0,sat=0,bri=0;
 	private JFrame frame;
 	private JLabel label;
 	private BufferedImage screen;
@@ -29,7 +31,7 @@ public class ImageViewer {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		
-		raw=ImageIO.read(new File("flower.png"));
+		raw=ImageIO.read(new File("wheel.png"));
 		
 		//Keep the modified image seperate for original 
 		screen=new BufferedImage(raw.getWidth(),raw.getHeight(),BufferedImage.TYPE_INT_RGB);
@@ -43,14 +45,16 @@ public class ImageViewer {
 		JPanel controls=new JPanel();
 		GridLayout contLayout=new GridLayout(2,3);
 		controls.setLayout(contLayout);
-		JSlider hue= new JSlider(JSlider.HORIZONTAL,0,360,0);
+		
+		JSlider hue= new JSlider(JSlider.HORIZONTAL,-180,180,0);
 		hue.addChangeListener((ChangeEvent e)->{changeHue(TO_DEGREES*((JSlider)e.getSource()).getValue());});
 		
 		
-		JSlider sat= new JSlider(JSlider.HORIZONTAL,0,360,0);
+		JSlider sat= new JSlider(JSlider.HORIZONTAL,-100,100,0);
+		sat.addChangeListener((ChangeEvent e)->{changeSat(TO_INT*((JSlider)e.getSource()).getValue());});
 		
-		
-		JSlider bri= new JSlider(JSlider.HORIZONTAL,0,360,0);
+		JSlider bri= new JSlider(JSlider.HORIZONTAL,-100,100,0);
+		bri.addChangeListener((ChangeEvent e)->{changeBri(TO_INT*((JSlider)e.getSource()).getValue());});
 		
 		controls.add(hue);
 		controls.add(sat);
@@ -71,30 +75,44 @@ public class ImageViewer {
 		frame.setVisible(true);
 	}
 	
-	public int rotateHue(int rgb, float angle ) {
-		int b=rgb&0xFF;
-		int g=(rgb>>8)&0xFF;
-		int r=(rgb>>16)&0xFF;
-		float[] hsb=Color.RGBtoHSB(r, g, b, null);
-		hsb[0]+=angle;
-		return Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]);
-	}
-	public void changeHue(float offset) {
+	public void update() {
 		
-		long time=System.currentTimeMillis();
 		int width=raw.getWidth();
 		int height=raw.getHeight();
-		
 		for (int y = 0; y < height; y++) {	
 			for (int x = 0; x < width; x++) {
-				int rgb = rotateHue(raw.getRGB(x, y), offset);
-				screen.setRGB(x, y, rgb);
+				int rgb = raw.getRGB(x, y);
+				float[] hsb=Color.RGBtoHSB((rgb>>16)&0xFF, (rgb>>8)&0xFF, rgb&0xFF, null);
+				hsb[0]+=hue;
+				hsb[1]+=sat;
+				hsb[2]+=bri;
+				for(int i=1;i<3;i++) {
+					if(hsb[i]<0)hsb[i]=0;
+					if(hsb[i]>1)hsb[i]=1;
+				}
+				screen.setRGB(x, y, Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
 			}
 		}
-		System.out.println(System.currentTimeMillis()-time);
-		frame.repaint();
-///		System.out.println("test");
 		
+		
+		
+		
+		
+	}
+	public void changeHue(float hue) {
+		this.hue=hue;
+		update();
+		frame.repaint();
+	}
+	public void changeSat(float sat) {
+		this.sat=sat;
+		update();
+		frame.repaint();
+	}
+	public void changeBri(float bri) {
+		this.bri=bri;
+		update();
+		frame.repaint();
 	}
 
 	public void refresh(){
