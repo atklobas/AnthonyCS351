@@ -25,7 +25,7 @@ public class ColorChanger {
 		processed = new BufferedImage(width, height, raw.getType());
 		float hue = 90 / 360.0f;
 		// hard coded hue value
-		for (int y = 0; y < height; y++) {
+		for (int y = 0; y < height; y++) {	
 			for (int x = 0; x < width; x++) {
 				int rgb = rotateHue(raw.getRGB(x, y), hue);
 				processed.setRGB(x, y, rgb);
