@@ -17,6 +17,10 @@ import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 public class ImageViewer {
 	public static final float TO_DEGREES=1f/360;
 	public static final float TO_INT=1f/100;
@@ -25,13 +29,17 @@ public class ImageViewer {
 	private JLabel label;
 	private BufferedImage screen;
 	private BufferedImage raw;
+
+	
 	public ImageViewer() throws IOException{
+
+		
 		//create a Frame/window
 		frame=new JFrame("image viewer");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		
-		raw=ImageIO.read(new File("wheel.png"));
+		raw=ImageIO.read(new File("colors.jpg"));
 		
 		//Keep the modified image seperate for original 
 		screen=new BufferedImage(raw.getWidth(),raw.getHeight(),BufferedImage.TYPE_INT_RGB);
@@ -75,24 +83,35 @@ public class ImageViewer {
 		frame.setVisible(true);
 	}
 	
-	public void update() {
+	
+	public void update(int ymin, int ymax) {
 		
-		int width=raw.getWidth();
+	}
+	
+	
+	
+	public void update() {
 		int height=raw.getHeight();
+		
+		long time=System.currentTimeMillis();
+		int width=raw.getWidth();
 		for (int y = 0; y < height; y++) {	
 			for (int x = 0; x < width; x++) {
 				int rgb = raw.getRGB(x, y);
 				float[] hsb=Color.RGBtoHSB((rgb>>16)&0xFF, (rgb>>8)&0xFF, rgb&0xFF, null);
 				hsb[0]+=hue;
+				if(hue>1)hue-=1;
+				else if (hue<0)hue+=1;
 				hsb[1]+=sat;
 				hsb[2]+=bri;
 				for(int i=1;i<3;i++) {
 					if(hsb[i]<0)hsb[i]=0;
-					if(hsb[i]>1)hsb[i]=1;
+					else if(hsb[i]>1)hsb[i]=1;
 				}
 				screen.setRGB(x, y, Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
 			}
 		}
+		System.out.println(System.currentTimeMillis()-time);
 		
 		
 		
@@ -134,5 +153,17 @@ public class ImageViewer {
 		//graphs.GraphAlgorithms.depthFirstSearch(g);
 		view.frame.repaint();
 	}
-
+	
+	private class Worker implements Runnable{
+		int miny,maxy;
+		public Worker(int miny,int maxy) {
+			this.miny=miny;
+			this.maxy=maxy;
+		}
+		@Override
+		public void run() {
+			update(miny,maxy);
+		}
+		
+	}
 }
