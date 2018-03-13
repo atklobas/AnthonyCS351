@@ -1,0 +1,44 @@
+
+tree:tree.o
+	gcc -o tree tree.o
+tree.o:tree.s
+	as -o tree.o tree.s
+clean:
+	rm -vf star *.o
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

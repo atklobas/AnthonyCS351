@@ -15,11 +15,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class ImageViewer {
 	public static final float TO_DEGREES=1f/360;
@@ -31,56 +29,65 @@ public class ImageViewer {
 	private BufferedImage raw;
 
 	
-	public ImageViewer() throws IOException{
-
+	public ImageViewer(){
+		SwingUtilities.invokeLater(()->{
+			
 		
-		//create a Frame/window
-		frame=new JFrame("image viewer");
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
-		
-		raw=ImageIO.read(new File("colors.jpg"));
-		
-		//Keep the modified image seperate for original 
-		screen=new BufferedImage(raw.getWidth(),raw.getHeight(),BufferedImage.TYPE_INT_RGB);
-		screen.getGraphics().drawImage(raw, 0, 0, null);
-		
-		//create component to display image;
-		ImageIcon icon=new ImageIcon();
-		icon.setImage(screen);
-		label=new JLabel(icon);
-		
-		JPanel controls=new JPanel();
-		GridLayout contLayout=new GridLayout(2,3);
-		controls.setLayout(contLayout);
-		
-		JSlider hue= new JSlider(JSlider.HORIZONTAL,-180,180,0);
-		hue.addChangeListener((ChangeEvent e)->{changeHue(TO_DEGREES*((JSlider)e.getSource()).getValue());});
-		
-		
-		JSlider sat= new JSlider(JSlider.HORIZONTAL,-100,100,0);
-		sat.addChangeListener((ChangeEvent e)->{changeSat(TO_INT*((JSlider)e.getSource()).getValue());});
-		
-		JSlider bri= new JSlider(JSlider.HORIZONTAL,-100,100,0);
-		bri.addChangeListener((ChangeEvent e)->{changeBri(TO_INT*((JSlider)e.getSource()).getValue());});
-		
-		controls.add(hue);
-		controls.add(sat);
-		controls.add(bri);
-		controls.add(new JLabel("Hue"));
-		controls.add(new JLabel("Sat"));
-		controls.add(new JLabel("Bri"));
-		
-		
-		
-		BorderLayout layout =new BorderLayout();
-		frame.setLayout(layout);
-		frame.add(label, BorderLayout.CENTER);
-		frame.add(controls,BorderLayout.SOUTH);
-		
-		frame.add(label);
-		frame.pack();
-		frame.setVisible(true);
+			//create a Frame/window
+			frame=new JFrame("image viewer");
+			frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+			
+			
+			try {
+				raw=ImageIO.read(new File("wheel.png"));
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			//Keep the modified image seperate for original 
+			screen=new BufferedImage(raw.getWidth(),raw.getHeight(),BufferedImage.TYPE_INT_ARGB);
+			screen.getGraphics().drawImage(raw, 0, 0, null);
+			
+			//create component to display image;
+			ImageIcon icon=new ImageIcon();
+			icon.setImage(screen);
+			label=new JLabel(icon);
+			
+			//create panel for controls
+			JPanel controls=new JPanel();
+			GridLayout contLayout=new GridLayout(2,3);
+			controls.setLayout(contLayout);
+			
+			JSlider hue= new JSlider(JSlider.HORIZONTAL,-180,180,0);
+			hue.addChangeListener((ChangeEvent e)->{changeHue(TO_DEGREES*((JSlider)e.getSource()).getValue());});
+			
+			
+			JSlider sat= new JSlider(JSlider.HORIZONTAL,-100,100,0);
+			sat.addChangeListener((ChangeEvent e)->{changeSat(TO_INT*((JSlider)e.getSource()).getValue());});
+			
+			JSlider bri= new JSlider(JSlider.HORIZONTAL,-100,100,0);
+			bri.addChangeListener((ChangeEvent e)->{changeBri(TO_INT*((JSlider)e.getSource()).getValue());});
+			
+			//add sliders that control hue,saturation, and brightness
+			controls.add(hue);
+			controls.add(sat);
+			controls.add(bri);
+			controls.add(new JLabel("Hue"));
+			controls.add(new JLabel("Saturation"));
+			controls.add(new JLabel("Brightness"));
+			
+			
+			
+			BorderLayout layout =new BorderLayout();
+			frame.setLayout(layout);
+			frame.add(label, BorderLayout.CENTER);
+			frame.add(controls,BorderLayout.SOUTH);
+			
+			frame.add(label);
+			frame.pack();
+			frame.setVisible(true);
+		});
 	}
 	
 	
@@ -91,31 +98,32 @@ public class ImageViewer {
 	
 	
 	public void update() {
-		int height=raw.getHeight();
-		
 		long time=System.currentTimeMillis();
+		int height=raw.getHeight();
 		int width=raw.getWidth();
+		float[] hsb=new float[3];
 		for (int y = 0; y < height; y++) {	
 			for (int x = 0; x < width; x++) {
 				int rgb = raw.getRGB(x, y);
-				float[] hsb=Color.RGBtoHSB((rgb>>16)&0xFF, (rgb>>8)&0xFF, rgb&0xFF, null);
+				
+				Color.RGBtoHSB((rgb>>16)&0xFF, (rgb>>8)&0xFF, rgb&0xFF, hsb);
+				//add hue offset, if its outside of [0-1] add/subtact (it loops) 
 				hsb[0]+=hue;
 				if(hue>1)hue-=1;
 				else if (hue<0)hue+=1;
+				
+				//if saturation or brightness is outside of range, put it at the extreme
 				hsb[1]+=sat;
 				hsb[2]+=bri;
 				for(int i=1;i<3;i++) {
 					if(hsb[i]<0)hsb[i]=0;
 					else if(hsb[i]>1)hsb[i]=1;
 				}
-				screen.setRGB(x, y, Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
+
+				screen.setRGB(x, y, (rgb|0xFFFFFF)&Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]));
 			}
 		}
 		System.out.println(System.currentTimeMillis()-time);
-		
-		
-		
-		
 		
 	}
 	public void changeHue(float hue) {
@@ -147,23 +155,7 @@ public class ImageViewer {
 	
 
 	public static void main(String[] args) throws IOException{
-		ImageViewer view =new ImageViewer();
-		//Graph g=new rasterGraph(view.getImageRaster());
-		//graphs.GraphAlgorithms.addObserver(()->view.refresh());
-		//graphs.GraphAlgorithms.depthFirstSearch(g);
-		view.frame.repaint();
+		new ImageViewer();
 	}
-	
-	private class Worker implements Runnable{
-		int miny,maxy;
-		public Worker(int miny,int maxy) {
-			this.miny=miny;
-			this.maxy=maxy;
-		}
-		@Override
-		public void run() {
-			update(miny,maxy);
-		}
-		
-	}
+
 }
